@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name SparkFun-Boards)(type Legacy)(uri ${KIPRJMOD}/SparkFun-Boards.lib)(options "")(descr ""))
+  (lib (name LED)(type Legacy)(uri ${KIPRJMOD}/LED.lib)(options "")(descr ""))
+)
