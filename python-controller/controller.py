@@ -80,7 +80,7 @@ def work():
                         break
                 lastModeCheck = now
 
-            if pollInterval != False and now - lastPoll > pollInterval:    #Regularly call the poll function of the mode if it requires regular polling
+            if pollInterval >= 0 and now - lastPoll > pollInterval:    #Regularly call the poll function of the mode if it requires regular polling
                 #The poll function returns the desired interval when it should be called next - or False if polling is not required in this mode
                 pollInterval = mode.poll(device)
                 lastPoll = now
@@ -94,6 +94,7 @@ def work():
             if timeTo30fps > 0:
                 time.sleep(timeTo30fps)
                     #End of main loop -------------------------------------------
+
 
     except KeyboardInterrupt:       #User pressed Ctrl+c
         mqtt.disconnect()

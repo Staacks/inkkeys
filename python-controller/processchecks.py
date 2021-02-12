@@ -4,6 +4,8 @@ import psutil
 if sys.platform in ['linux', 'linux2']:
     import Xlib
     import Xlib.display
+    display = Xlib.display.Display()
+    root = display.screen().root
 elif sys.platform in ['Windows', 'win32', 'cygwin']:
     import win32gui
 elif sys.platform in ['Mac', 'darwin', 'os2', 'os2emx']:
@@ -20,8 +22,6 @@ def getActiveWindow():
     active_window_name = None
     try:
         if sys.platform in ['linux', 'linux2']:
-            display = Xlib.display.Display()
-            root = display.screen().root
             windowID = root.get_full_property(display.intern_atom('_NET_ACTIVE_WINDOW'), Xlib.X.AnyPropertyType).value[0]
             window = display.create_resource_object('window', windowID)
             return window.get_wm_class()[0]

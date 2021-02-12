@@ -1,10 +1,14 @@
 from .protocol import *
 import serial
 import time
+from threading import Lock
 from PIL import Image, ImageDraw, ImageOps, ImageFont
 
 class Device:
     ser = None
+    inbuffer = ""
+
+    awaitingResponseLock = Lock()
 
     testmode = False
     nLeds = 0
@@ -52,17 +56,21 @@ class Device:
         self.ser.write(data)
 
     def readFromDevice(self):
-        try:
-            incoming = self.ser.readline().decode()[:-2]
+        if self.ser.in_waiting > 0:
+            self.inbuffer += self.ser.read(self.ser.in_waiting).decode().replace("\r", "")
+        chunks = self.inbuffer.split("\n", 1)
+        if len(chunks) > 1:
+            cmd = chunks[0]
+            self.inbuffer = chunks[1]
             if self.debug:
-                print("Received: " + incoming)
-            return incoming
-        except:
-            return "";
+                print("Received: " + cmd)
+            return cmd
+        return None
 
     def poll(self):
-        if self.ser.in_waiting > 0:
+        with self.awaitingResponseLock:
             input = self.readFromDevice()
+        if input != None:
             if input[0] == KeyCode.JOG.value and (input[1:].isdecimal() or (input[1] == '-' and input[2:].isdecimal())):
                 if KeyCode.JOG.value in self.callbacks:
                     self.callbacks[KeyCode.JOG.value](int(input[1:]))
@@ -86,40 +94,49 @@ class Device:
         self.sendToDevice(CommandCode.LED.value + " " + " ".join(colors))
 
     def requestInfo(self, timeout):
-        print("Requesting device info...")
-        start = time.time()
-        self.sendToDevice(CommandCode.INFO.value)
-        line = self.readFromDevice()
-        while line != "Inkkeys":
-            print("Skipping: ", line)
-            if time.time() - start > timeout:
-                return False
+        with self.awaitingResponseLock:
+            print("Requesting device info...")
+            start = time.time()
+            self.sendToDevice(CommandCode.INFO.value)
             line = self.readFromDevice()
-        print("Header found. Waiting for infos...")
-        line = self.readFromDevice()
-        while line != "Done":
-            if line.startswith("TEST "):
-                self.testmode = line[5] != "0"
-            elif line.startswith("N_LED "):
-                self.nLeds = int(line[6:])
-            elif line.startswith("DISP_W "):
-                self.dispW = int(line[7:])
-            elif line.startswith("DISP_H "):
-                self.dispH = int(line[7:])
-            elif line.startswith("ROT_CIRCLE_STEPS "):
-                self.rotCircleSteps = int(line[17:])
-            else:
+            while line != "Inkkeys":
+                if time.time() - start > timeout:
+                    return False
+                if line == None:
+                    time.sleep(0.1)
+                    line = self.readFromDevice()
+                    continue
                 print("Skipping: ", line)
-            if time.time() - start > timeout:
-                return False
+                line = self.readFromDevice()
+            print("Header found. Waiting for infos...")
             line = self.readFromDevice()
-        print("End of info received.")
-        print("Testmode: ", self.testmode)
-        print("Number of LEDs: ", self.nLeds)
-        print("Display width: ", self.dispW)
-        print("Display height: ", self.dispH)
-        print("Rotation circle steps: ", self.rotCircleSteps)
-        return True
+            while line != "Done":
+                if time.time() - start > timeout:
+                    return False
+                if line == None:
+                    time.sleep(0.1)
+                    line = self.readFromDevice()
+                    continue
+                if line.startswith("TEST "):
+                    self.testmode = line[5] != "0"
+                elif line.startswith("N_LED "):
+                    self.nLeds = int(line[6:])
+                elif line.startswith("DISP_W "):
+                    self.dispW = int(line[7:])
+                elif line.startswith("DISP_H "):
+                    self.dispH = int(line[7:])
+                elif line.startswith("ROT_CIRCLE_STEPS "):
+                    self.rotCircleSteps = int(line[17:])
+                else:
+                    print("Skipping: ", line)
+                line = self.readFromDevice()
+            print("End of info received.")
+            print("Testmode: ", self.testmode)
+            print("Number of LEDs: ", self.nLeds)
+            print("Display width: ", self.dispW)
+            print("Display height: ", self.dispH)
+            print("Rotation circle steps: ", self.rotCircleSteps)
+            return True
 
     def sendImage(self, x, y, image):
         self.imageBuffer.append({"x": x, "y": y, "image": image.copy()})
@@ -141,20 +158,29 @@ class Device:
         self.imageBuffer = []
 
     def updateDisplay(self, fullRefresh=False, timeout=5):
-        start = time.time()
-        self.sendToDevice(CommandCode.REFRESH.value + " " + (RefreshTypeCode.FULL.value if fullRefresh else RefreshTypeCode.PARTIAL.value))
-        line = self.readFromDevice()
-        while line != "ok":
-            if time.time() - start > timeout:
-                return False
+        with self.awaitingResponseLock:
+            start = time.time()
+            self.sendToDevice(CommandCode.REFRESH.value + " " + (RefreshTypeCode.FULL.value if fullRefresh else RefreshTypeCode.PARTIAL.value))
             line = self.readFromDevice()
-        self.resendImageData()
-        self.sendToDevice(CommandCode.REFRESH.value + " " + RefreshTypeCode.OFF.value)
-        line = self.readFromDevice()
-        while line != "ok":
-            if time.time() - start > timeout:
-                return False
+            while line != "ok":
+                if time.time() - start > timeout:
+                    return False
+                if line == None:
+                    time.sleep(0.1)
+                    line = self.readFromDevice()
+                    continue
+                line = self.readFromDevice()
+            self.resendImageData()
+            self.sendToDevice(CommandCode.REFRESH.value + " " + RefreshTypeCode.OFF.value)
             line = self.readFromDevice()
+            while line != "ok":
+                if time.time() - start > timeout:
+                    return False
+                if line == None:
+                    time.sleep(0.1)
+                    line = self.readFromDevice()
+                    continue
+                line = self.readFromDevice()
 
     def getAreaFor(self, function):
         if function == "title":
