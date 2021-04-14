@@ -63,5 +63,7 @@ Apparently, the original design used revision 1 of the display, while many newly
 ## Gallery
 
 ![Original design](img/original.jpg?raw=true "Original design as presented on there.oughta.be with the 3d printing files from this repository.")
+Original design as presented on there.oughta.be with the 3d printing files from this repository.
 
 ![Original design](img/john_mat_roland.jpg?raw=true "Design by John, Mat and Roland from the UK. The case was CNC milled from beech with a similarly machined clear perspex lid.")
+Design by John, Mat and Roland from the UK. The case was CNC milled from beech with a similarly machined clear perspex lid.
