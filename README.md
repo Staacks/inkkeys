@@ -5,6 +5,8 @@ In contrast to most of my other projects, I decided to put this into its own rep
 
 If you have pull-requests, bug reports or want to contribute new case designs, please do not hesitate to open an issue. For generic discussions, "show and tell" and if you are looking for support for something that is not a problem in the code here, I would recommend [r/thereoughtabe on reddit](https://www.reddit.com/r/thereoughtabe/).
 
+<a href="https://www.buymeacoffee.com/there.oughta.be" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" height="47" width="174" ></a>
+
 ## Common problems
 
 ### Display revision 2
@@ -63,7 +65,8 @@ Apparently, the original design used revision 1 of the display, while many newly
 ## Gallery
 
 ![Original design](img/original.jpg?raw=true "Original design as presented on there.oughta.be with the 3d printing files from this repository.")
+Original design as presented on there.oughta.be with the 3d printing files from this repository.
 
 ![Original design](img/john_mat_roland.jpg?raw=true "Design by John, Mat and Roland from the UK. The case was CNC milled from beech with a similarly machined clear perspex lid.")
+Design by John, Mat and Roland from the UK. The case was CNC milled from beech with a similarly machined clear perspex lid. You can find the knob with finger dimple by Roland Irving in the 3dprint folder as know_with_dimple.stl.
 
-You can find the knob with finger dimple by Roland Irving in the 3dprint folder as know_with_dimple.stl.
