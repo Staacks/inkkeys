@@ -37,27 +37,27 @@ Apparently, the original design used revision 1 of the display, while many newly
 >
 >Next, go to your Arduino sketch. This is for the hardware-test script. Enable line numbering and go to line 43 which reads -
 >
->GxEPD2_290 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
+```c
+GxEPD2_290 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
+```
 >
 >Change this to -
->
->GxEPD2_290_T94 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
->
+
+```c
+GxEPD2_290_T94 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
+```
+
 >Then go to settings.h
 >
 >Lines 2 - 7 need to be altered so change that section of code as follows -
->
->const byte PIN_DIN = 16;
->
->const byte PIN_CLK = 15;
->
->const byte PIN_CS = 19;
->
->const byte PIN_DC = 18;
->
->const byte PIN_RST = 10;
->
->const byte PIN_BUSY = 14;
+```c
+const byte PIN_DIN = 16;
+const byte PIN_CLK = 15;
+const byte PIN_CS = 19;
+const byte PIN_DC = 18;
+const byte PIN_RST = 10;
+const byte PIN_BUSY = 14;
+```
 >
 >The sketch will then compile and when uploaded to the board you will get the Waveshare drawing all sorts of Austin Powers time machine circles that make your eyes spin! 
 
