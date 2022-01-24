@@ -19,7 +19,7 @@ class CommandCode(Enum):
     INFO = "I"
 
 class RefreshTypeCode(Enum):
-    PARTIAL = "p"
+    PARTIAL = "f"
     FULL = "f"
     OFF = "o"
     

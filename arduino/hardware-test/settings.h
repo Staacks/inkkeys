@@ -3,8 +3,8 @@ const byte PIN_DIN = 16;
 const byte PIN_CLK = 15;
 const byte PIN_CS = 19;
 const byte PIN_DC = 18;
-const byte PIN_RST = 14;
-const byte PIN_BUSY = 10;
+const byte PIN_RST = 10;
+const byte PIN_BUSY = 14;
 
 //Display size
 const short DISP_W = 128; //Dispaly width
