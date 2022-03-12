@@ -1,16 +1,16 @@
 /*
  * E-Ink adaptive macro keyboard
  * See https://there.oughta.be/a/macro-keyboard
- * 
+ *
  * This is only the test code for the assembled device.
  * It should show a circular pattern on the e-ink screen and run a
  * sequence of red, green, blue and white across the LEDs of the jog
  * dial (moving clock-wise, starting with the
  * LED closest to the display).
- * 
+ *
  * It should also report key presses, rotations of the jog dial and
  * a press of the jog dial on the serial.
- * 
+ *
  * It also tests the USB functions. It should register as a serial
  * device and as a HID device with keyboard and mouse functions. If
  * you send "test" (terminated with a carriage return) to the serial
@@ -40,6 +40,7 @@ long rotaryPosition = 0;  //Last position to keep track of changes
 
 //Display
 GxEPD2_290 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
+// Alternative classes: GxEPD2_290_T94 (V2 of the display), GxEPD2_290_T94_V2 (V2 when partial updates do not work)
 
 //LEDs
 Adafruit_NeoPixel leds = Adafruit_NeoPixel(N_LED, PIN_LED, NEO_RGB + NEO_KHZ400);
@@ -66,13 +67,13 @@ void setup() {
   //           maximum current draw and either adapt the hardware
   //           design or the animations accordingly (i.e. do not
   //           allow for white color).
-  
+
   Serial.begin(115200);
 
   //Greeting on serial
   Serial.println("=== HARDWARE TEST ===");
   Serial.println("https://there.oughta.be/a/macro-keyboard");
-  
+
   //Set pin modes for keys
   for (int i = 0; i < nSW; i++) {
     pinMode(SW[i], INPUT_PULLUP);
@@ -135,9 +136,9 @@ void einkTestPattern() {
       uint8_t pixel;
       int dx = x - DISP_W/2;
       int dy = y - DISP_H/2;
-      int d = dx*dx+dy*dy; 
+      int d = dx*dx+dy*dy;
       pixel = d % 1000 > 500 ? 1 : 0;
-      
+
       b |= pixel; //Set bit of current pixel
       j++;
       if (j > 7) {
@@ -262,12 +263,12 @@ void handleSerialInput() {
         } else {
           Serial.println("Error: Unknown command. The hardware test code only supports the commands \"test\" and \"I\".");
         }
-        
+
       }
-      
+
       //Command was handled. Reset buffer
       serialBufferCount = 0;
-      
+
     } else {
       //Just a normal character. Store it in the buffer.
       if (serialBufferCount < serialBufferSize) {

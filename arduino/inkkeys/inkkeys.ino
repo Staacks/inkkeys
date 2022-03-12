@@ -1,7 +1,7 @@
 /*
  * E-Ink adaptive macro keyboard
  * See https://there.oughta.be/a/macro-keyboard
- * 
+ *
  * This is the main code which acts as a HID keyboard while
  * allowing to be controlled through a serial interface.
  */
@@ -27,6 +27,7 @@ long rotaryPosition = 0;  //Last position to keep track of changes
 
 //Display
 GxEPD2_290 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
+// Alternative classes: GxEPD2_290_T94 (V2 of the display), GxEPD2_290_T94_V2 (V2 when partial updates do not work)
 
 void initDisplay() {
   display.init(0, true, 2, false);
@@ -40,14 +41,14 @@ void setup() {
   initLEDs();
   //Initialize LEDs first, for some reason they initialize blue
   //  after a power cycle which is pretty annoying.
-  
+
   Serial.begin(115200);
 
   defaultAssignment();
 
   //Greeting on serial
   Serial.println("= InkKeys =");
-  
+
   //Set pin modes for keys
   for (int i = 0; i < nSW; i++) {
     pinMode(SW[i], INPUT_PULLUP);
