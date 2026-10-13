@@ -1,4 +1,13 @@
 //Display
+//Revision 1 is the display of the original build, most displays sold now are revision 2.
+//For revision 2, also swap the RST and BUSY pins below (see "Display revision 2" in the README).
+#define DISPLAY_REVISION 1
+
+//Revision 2 only: repeats of the main phase of a partial refresh. More repeats erase the
+//previous image more thoroughly, too many smear edges. Each adds ~0.25s per refresh.
+//To try other values without flashing, send "R p <repeats>" instead of "R p".
+const byte PARTIAL_REFRESH_REPEATS = 3;
+
 const byte PIN_DIN = 16;
 const byte PIN_CLK = 15;
 const byte PIN_CS = 19;

@@ -316,13 +316,16 @@ void processLEDCommand() {
   leds.show();
 }
 
+//"R p", "R f" or "R o". A partial refresh takes an optional repeat count ("R p 4"), see PARTIAL_REFRESH_REPEATS.
 void processRefreshCommand() {
-  if (serialBufferCount != 3 || serialBuffer[1] != ' ' || (serialBuffer[2] != 'p' && serialBuffer[2] != 'f' && serialBuffer[2] != 'o')) {
+  if (serialBufferCount < 3 || serialBuffer[1] != ' ' || (serialBuffer[2] != 'p' && serialBuffer[2] != 'f' && serialBuffer[2] != 'o')
+      || (serialBufferCount > 3 && (serialBuffer[2] != 'p' || serialBufferCount < 5 || serialBuffer[3] != ' '))) {
     Serial.println("E: Bad format.");
     return;
   }
   switch (serialBuffer[2]) {
     case 'p':
+      display.preparePartialRefresh(serialBufferCount > 3 ? atoi(serialBuffer + 4) : PARTIAL_REFRESH_REPEATS);
       display.refresh(true);
       break;
     case 'f':

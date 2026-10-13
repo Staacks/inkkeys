@@ -26,8 +26,70 @@ Encoder rotary(PIN_ROTA, PIN_ROTB);
 long rotaryPosition = 0;  //Last position to keep track of changes
 
 //Display
-GxEPD2_290 display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
-// Alternative classes: GxEPD2_290_T94 (V2 of the display), GxEPD2_290_T94_V2 (V2 when partial updates do not work)
+#if DISPLAY_REVISION == 2
+
+//GxEPD2 only loads the waveform table for partial refreshes, so they run with whatever voltages
+//the last full refresh left behind. This subclass loads the table together with the voltages and
+//VCOM from Waveshare's reference driver for this panel (epd2in9_V2).
+//The table differs from the stock one in one way: while changed pixels are driven, unchanged pixels
+//sit slightly off VCOM and black ones slowly fade to grey. So in every repeat, after the 10 frames
+//that drive changed pixels (phase A), unchanged black pixels get 2 frames pushing them back (phase B).
+const unsigned char partialLut[153] PROGMEM = {
+  0x10, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //Voltages per phase for black->black
+  0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //black->white
+  0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //white->black
+  0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //white->white
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //VCOM
+  0x0A, 0x02, 0x00, 0x00, 0x00, 0x00, 0x02, //Group 0: phase A 10 frames, phase B 2 frames, repeated (last byte, see PARTIAL_REFRESH_REPEATS)
+  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x00, 0x00, 0x00,
+};
+const byte PARTIAL_LUT_REPEAT_INDEX = 66;
+
+class InkkeysDisplay : public GxEPD2_290_T94_V2 {
+  public:
+    InkkeysDisplay(int16_t cs, int16_t dc, int16_t rst, int16_t busy) : GxEPD2_290_T94_V2(cs, dc, rst, busy) {}
+
+    //Call before every partial refresh, a full refresh replaces these settings
+    void preparePartialRefresh(byte repeats) {
+      _writeCommand(0x32); //Waveform table
+      for (byte i = 0; i < sizeof(partialLut); i++)
+        _writeData(i == PARTIAL_LUT_REPEAT_INDEX ? repeats : pgm_read_byte(&partialLut[i]));
+      _writeCommand(0x3F); //End option
+      _writeData(0x22);
+      _writeCommand(0x03); //Gate voltage
+      _writeData(0x17);
+      _writeCommand(0x04); //Source voltages
+      _writeData(0x41);
+      _writeData(0xB0);
+      _writeData(0x32);
+      _writeCommand(0x2C); //VCOM
+      _writeData(0x36);
+      _using_partial_mode = true; //Keeps GxEPD2 from loading its own table over ours
+    }
+};
+
+#else
+
+class InkkeysDisplay : public GxEPD2_290 {
+  public:
+    InkkeysDisplay(int16_t cs, int16_t dc, int16_t rst, int16_t busy) : GxEPD2_290(cs, dc, rst, busy) {}
+    void preparePartialRefresh(byte repeats) {} //The stock waveform works for revision 1
+};
+
+#endif
+
+InkkeysDisplay display(/*CS=*/ PIN_CS, /*DC=*/ PIN_DC, /*RST=*/ PIN_RST, /*BUSY=*/ PIN_BUSY);
 
 void initDisplay() {
   display.init(0, true, 2, false);

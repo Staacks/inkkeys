@@ -61,6 +61,10 @@ const byte PIN_BUSY = 14;
 >
 >The sketch will then compile and when uploaded to the board you will get the Waveshare drawing all sorts of Austin Powers time machine circles that make your eyes spin! 
 
+The class change above applies to the hardware test. In the main inkkeys sketch, set `#define DISPLAY_REVISION 2` in `settings.h` instead (and swap the RST and BUSY pins there as shown above). This selects `GxEPD2_290_T94_V2` together with a partial refresh waveform tuned for this panel. With the stock waveform, partial refreshes on revision 2 leave grey ghosts of previous images and unchanged black areas fade (see [#16](https://github.com/Staacks/inkkeys/issues/16)).
+
+If partial refreshes on your display still look grey, or smear the edges of icons, adjust `PARTIAL_REFRESH_REPEATS` in `settings.h` (3 by default, more drives harder but takes ~0.25s longer per step). You can try values without flashing by sending `R p <repeats>` over the serial connection instead of `R p`.
+
 
 ## Gallery
 
