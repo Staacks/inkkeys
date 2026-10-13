@@ -13,6 +13,7 @@ byte serialBufferCount = 0;
 //State while receiving an image
 unsigned short expectingImageData = 0;
 unsigned short imageDataTargetX, imageDataTargetY, imageDataTargetWidth, imageDataCurrentY;
+bool imageDataAgain = false; //True for the repeated transfer after a refresh, see processDisplayCommand()
 
 //Output an error message with index
 void printErrorWithIndex(const char * msg, byte i) {
@@ -276,6 +277,12 @@ void processDisplayCommand() {
   }
   i++;
   unsigned short imageDataTargetHeight = atoi(serialBuffer + i);
+  while (i < serialBufferCount && serialBuffer[i] >= '0' && serialBuffer[i] <= '9')
+    i++;
+  //An optional trailing " a" marks the repeat of an image after a refresh. Displays that compare
+  //two buffers on a partial refresh (like the SSD1680 of revision 2) need it in both buffers,
+  //otherwise the next partial refresh drives pixels against stale data and leaves ghosts.
+  imageDataAgain = (i+1 < serialBufferCount && serialBuffer[i] == ' ' && serialBuffer[i+1] == 'a');
   expectingImageData = imageDataTargetWidth*imageDataTargetHeight/8;
   imageDataCurrentY = imageDataTargetY;
 }
@@ -375,7 +382,10 @@ void handleSerialInput() {
         if (expectingImageData > 0) {
           expectingImageData--;
           if (serialBufferCount * 8 >= imageDataTargetWidth) {
-            display.writeImage(serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, 1, false, false, false);
+            if (imageDataAgain)
+              display.writeImageAgain(serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, 1, false, false, false);
+            else
+              display.writeImage(serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, 1, false, false, false);
             serialBufferCount = 0;
             imageDataCurrentY++;
           }

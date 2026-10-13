@@ -153,7 +153,8 @@ class Device:
             y = part["y"]
             w, h = image.size
             data = image.convert("1").rotate(180).tobytes()
-            self.sendToDevice(CommandCode.DISPLAY.value + " " + str(x) + " " + str(y) + " " + str(w) + " " + str(h))
+            #"a" tells the firmware to write the image to both of the display's buffers
+            self.sendToDevice(CommandCode.DISPLAY.value + " " + str(x) + " " + str(y) + " " + str(w) + " " + str(h) + " a")
             self.sendBinaryToDevice(data)
         self.imageBuffer = []
 
