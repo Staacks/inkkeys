@@ -8,11 +8,27 @@
 //Buffer to process serial input
 const int serialBufferSize = 256;
 char serialBuffer[serialBufferSize];
-byte serialBufferCount = 0;
+unsigned short serialBufferCount = 0; //Must be wider than a byte, or it wraps to 0 before the "too long" check can fire
 
 //State while receiving an image
 unsigned short expectingImageData = 0;
 unsigned short imageDataTargetX, imageDataTargetY, imageDataTargetWidth, imageDataCurrentY;
+unsigned short imageDataBytesPerRow, imageDataChunkSize; //Image rows are buffered and written in chunks of whole rows
+bool imageDataAgain = false; //True for the repeated transfer after a refresh, see processDisplayCommand()
+
+//Writes the rows buffered so far to the display controller.
+//Writing many rows per call matters: GxEPD2 sleeps 1ms on every write call.
+void flushImageRows() {
+  unsigned short rows = serialBufferCount / imageDataBytesPerRow;
+  if (rows == 0)
+    return;
+  if (imageDataAgain)
+    display.writeImageAgain((uint8_t*)serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, rows, false, false, false);
+  else
+    display.writeImage((uint8_t*)serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, rows, false, false, false);
+  imageDataCurrentY += rows;
+  serialBufferCount = 0;
+}
 
 //Output an error message with index
 void printErrorWithIndex(const char * msg, byte i) {
@@ -276,7 +292,19 @@ void processDisplayCommand() {
   }
   i++;
   unsigned short imageDataTargetHeight = atoi(serialBuffer + i);
-  expectingImageData = imageDataTargetWidth*imageDataTargetHeight/8;
+  while (i < serialBufferCount && serialBuffer[i] >= '0' && serialBuffer[i] <= '9')
+    i++;
+  //An optional trailing " a" marks the repeat of an image after a refresh. Displays that compare
+  //two buffers on a partial refresh (like the SSD1680 of revision 2) need it in both buffers,
+  //otherwise the next partial refresh drives pixels against stale data and leaves ghosts.
+  imageDataAgain = (i+1 < serialBufferCount && serialBuffer[i] == ' ' && serialBuffer[i+1] == 'a');
+  imageDataBytesPerRow = (imageDataTargetWidth+7)/8;
+  if (imageDataBytesPerRow == 0 || imageDataBytesPerRow > serialBufferSize) {
+    Serial.println("E: Bad format.");
+    return;
+  }
+  imageDataChunkSize = (serialBufferSize / imageDataBytesPerRow) * imageDataBytesPerRow;
+  expectingImageData = imageDataBytesPerRow*imageDataTargetHeight;
   imageDataCurrentY = imageDataTargetY;
 }
 
@@ -309,13 +337,16 @@ void processLEDCommand() {
   leds.show();
 }
 
+//"R p", "R f" or "R o". A partial refresh takes an optional repeat count ("R p 4"), see PARTIAL_REFRESH_REPEATS.
 void processRefreshCommand() {
-  if (serialBufferCount != 3 || serialBuffer[1] != ' ' || (serialBuffer[2] != 'p' && serialBuffer[2] != 'f' && serialBuffer[2] != 'o')) {
+  if (serialBufferCount < 3 || serialBuffer[1] != ' ' || (serialBuffer[2] != 'p' && serialBuffer[2] != 'f' && serialBuffer[2] != 'o')
+      || (serialBufferCount > 3 && (serialBuffer[2] != 'p' || serialBufferCount < 5 || serialBuffer[3] != ' '))) {
     Serial.println("E: Bad format.");
     return;
   }
   switch (serialBuffer[2]) {
     case 'p':
+      display.preparePartialRefresh(serialBufferCount > 3 ? atoi(serialBuffer + 4) : PARTIAL_REFRESH_REPEATS);
       display.refresh(true);
       break;
     case 'f':
@@ -330,7 +361,9 @@ void processRefreshCommand() {
 
 //Read from Serial in and react to enter (carriage return)
 void handleSerialInput() {
-  if (Serial.available() > 0) {
+  //Handle up to one USB packet per call instead of one byte, so image
+  //transfers are fast but keys and the jog dial are still polled often.
+  for (byte n = 0; n < 64 && Serial.available() > 0; n++) {
     char c = Serial.read();
 
     if (expectingImageData == 0 && c == '\n') {
@@ -374,11 +407,8 @@ void handleSerialInput() {
 
         if (expectingImageData > 0) {
           expectingImageData--;
-          if (serialBufferCount * 8 >= imageDataTargetWidth) {
-            display.writeImage(serialBuffer, imageDataTargetX, imageDataCurrentY, imageDataTargetWidth, 1, false, false, false);
-            serialBufferCount = 0;
-            imageDataCurrentY++;
-          }
+          if (serialBufferCount >= imageDataChunkSize || expectingImageData == 0)
+            flushImageRows();
         }
       }
     }
