@@ -130,6 +130,9 @@ void setup() {
   BootMouse.begin();
   SingleConsumer.begin();
 
+  //From here on, keys and the jog dial keep working while the display refreshes (see checkInputWhileBusy)
+  display.setBusyCallback(checkInputWhileBusy);
+
   //Show LED greeting to confirm completion
   ledGreeting(800);
   Serial.println("Ready.");
@@ -139,6 +142,14 @@ void loop() {
   checkKeysAndReportChanges();
   checkRotaryEncoderAndReportChanges();
   handleSerialInput();
+}
+
+//GxEPD2 calls this over and over while it waits for the panel to finish a refresh (about 1s, a full
+//refresh 4s). Without it, loop() stands still that long and presses that are over before it ends are lost.
+//Serial input waits: a command arriving now must not start another refresh in the middle of this one.
+void checkInputWhileBusy(const void*) {
+  checkKeysAndReportChanges();
+  checkRotaryEncoderAndReportChanges();
 }
 
 //Called when state of key has changed. Checks debounce time

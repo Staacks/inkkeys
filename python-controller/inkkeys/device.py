@@ -1,6 +1,7 @@
 from .protocol import *
 import serial
 import time
+from collections import deque
 from threading import Lock
 from PIL import Image, ImageDraw, ImageOps, ImageFont
 
@@ -31,6 +32,7 @@ class Device:
     def connect(self, dev):
         print("Connecting to ", dev, ".")
         self.ser = serial.Serial(dev, 115200, timeout=1)
+        self.lineQueue = deque() #Lines that arrived while waiting for a response, handled by poll()
         if not self.requestInfo(3):
             self.disconnect()
             return False
@@ -69,7 +71,7 @@ class Device:
 
     def poll(self):
         with self.awaitingResponseLock:
-            input = self.readFromDevice()
+            input = self.lineQueue.popleft() if self.lineQueue else self.readFromDevice()
         if input != None:
             if input[0] == KeyCode.JOG.value and (input[1:].isdecimal() or (input[1] == '-' and input[2:].isdecimal())):
                 if KeyCode.JOG.value in self.callbacks:
@@ -158,30 +160,30 @@ class Device:
             self.sendBinaryToDevice(data)
         self.imageBuffer = []
 
+    #Reads lines until "ok". Other lines (keys pressed during a display refresh, which the
+    #firmware reports right away) are queued for poll() instead of being lost.
+    def waitForOk(self, start, timeout):
+        line = self.readFromDevice()
+        while line != "ok":
+            if time.time() - start > timeout:
+                return False
+            if line == None:
+                time.sleep(0.1)
+            elif line != "":
+                self.lineQueue.append(line)
+            line = self.readFromDevice()
+        return True
+
     def updateDisplay(self, fullRefresh=False, timeout=5):
         with self.awaitingResponseLock:
             start = time.time()
             self.sendToDevice(CommandCode.REFRESH.value + " " + (RefreshTypeCode.FULL.value if fullRefresh else RefreshTypeCode.PARTIAL.value))
-            line = self.readFromDevice()
-            while line != "ok":
-                if time.time() - start > timeout:
-                    return False
-                if line == None:
-                    time.sleep(0.1)
-                    line = self.readFromDevice()
-                    continue
-                line = self.readFromDevice()
+            if not self.waitForOk(start, timeout):
+                return False
             self.resendImageData()
             self.sendToDevice(CommandCode.REFRESH.value + " " + RefreshTypeCode.OFF.value)
-            line = self.readFromDevice()
-            while line != "ok":
-                if time.time() - start > timeout:
-                    return False
-                if line == None:
-                    time.sleep(0.1)
-                    line = self.readFromDevice()
-                    continue
-                line = self.readFromDevice()
+            if not self.waitForOk(start, timeout):
+                return False
 
     def getAreaFor(self, function):
         if function == "title":
